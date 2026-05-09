@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>Hülya'nın Köşesi</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#E8436A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hülya">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Splash -->
+<div id="splash">
+  <div class="splash-inner">
+    <svg class="splash-icon" viewBox="0 0 80 80" fill="none">
+      <path d="M40 68S12 50 12 30a14 14 0 0128 0 14 14 0 0128 0c0 20-28 38-28 38z" fill="white"/>
+    </svg>
+    <p class="splash-name">Hülya'nın Köşesi</p>
+    <p class="splash-sub">Seninle gurur duyuyorum</p>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<div class="app">
+
+  <!-- ─── ANASAYFA ─── -->
+  <section id="t-home" class="tab active">
+    <header class="hdr">
+      <div>
+        <h1>Günaydın, Hülya</h1>
+        <p class="sub">Bugün seni düşünüyorum</p>
+      </div>
+      <div class="hdr-avatar">
+        <svg viewBox="0 0 36 36"><path d="M18 34S4 25 4 15a9 9 0 0118 0 9 9 0 0118 0c0 10-14 19-14 19z" fill="#E8436A"/></svg>
+      </div>
+    </header>
+    <main>
+      <!-- Quote card -->
+      <div class="quote-card" id="quote-card">
+        <div class="qc-deco">
+          <svg viewBox="0 0 40 30" fill="none"><path d="M0 18C0 8 6 2 14 0v6C9 7 7 11 7 16h7v14H0V18zm22 0C22 8 28 2 36 0v6c-5 1-7 5-7 10h7v14H22V18z" fill="white" opacity=".25"/></svg>
+        </div>
+        <p id="quote-text" class="quote-text">Yükleniyor...</p>
+        <div class="qc-actions">
+          <button class="qc-btn" id="fav-btn" onclick="toggleFav()" title="Favorilere ekle">
+            <svg id="fav-icon" viewBox="0 0 24 24"><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 3.403 4.068 2 6.5 2 8.763 2 10.824 3.398 12 5.184 13.176 3.398 15.237 2 17.5 2 19.932 2 23 3.404 23 7.191c0 4.105-5.369 8.863-11 14.402z" fill="none" stroke="white" stroke-width="1.8"/></svg>
+          </button>
+          <button class="qc-btn" onclick="refreshQuote()" title="Yeni not">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mood -->
+      <div class="section-label">Bugün nasılsın?</div>
+      <div class="card mood-wrap">
+        <div class="moods">
+          <button class="mood" data-mood="Mutlu" onclick="selectMood(this)">
+            <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="#FFF0C0" stroke="#F5C518" stroke-width="1.5"/><circle cx="13" cy="15" r="2" fill="#555"/><circle cx="23" cy="15" r="2" fill="#555"/><path d="M11 22c2 4 12 4 14 0" stroke="#555" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+            <span>Mutlu</span>
+          </button>
+          <button class="mood" data-mood="Huzurlu" onclick="selectMood(this)">
+            <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="#DFF5E3" stroke="#5CB85C" stroke-width="1.5"/><circle cx="13" cy="15" r="2" fill="#555"/><circle cx="23" cy="15" r="2" fill="#555"/><path d="M12 22c2 2 10 2 12 0" stroke="#555" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+            <span>Huzurlu</span>
+          </button>
+          <button class="mood" data-mood="Normal" onclick="selectMood(this)">
+            <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="#EEE" stroke="#AAA" stroke-width="1.5"/><circle cx="13" cy="15" r="2" fill="#555"/><circle cx="23" cy="15" r="2" fill="#555"/><path d="M12 23h12" stroke="#555" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>Normal</span>
+          </button>
+          <button class="mood" data-mood="Yorgun" onclick="selectMood(this)">
+            <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="#E8E0F5" stroke="#9B59B6" stroke-width="1.5"/><path d="M10 14q3-1 6 0M20 14q3-1 6 0" stroke="#555" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M12 24c2-2 10-2 12 0" stroke="#555" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+            <span>Yorgun</span>
+          </button>
+          <button class="mood" data-mood="Stresli" onclick="selectMood(this)">
+            <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="#FFE5E5" stroke="#E74C3C" stroke-width="1.5"/><path d="M11 13q2-2 6 0M19 13q2-2 6 0" stroke="#555" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M11 24c2-4 12-4 14 0" stroke="#555" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+            <span>Stresli</span>
+          </button>
+        </div>
+        <div id="mood-hist"></div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ─── FAVORİLER ─── -->
+  <section id="t-favs" class="tab">
+    <header class="hdr"><div><h1>Sakladıkların</h1><p class="sub">Kalbine dokunan notlar</p></div></header>
+    <main><div id="favs-list" class="list-wrap"></div></main>
+  </section>
+
+  <!-- ─── TAKİP ─── -->
+  <section id="t-track" class="tab">
+    <header class="hdr"><div><h1>Günlük Takip</h1><p class="sub">Küçük adımlar, büyük değişimler</p></div></header>
+    <main>
+      <div id="prog-wrap"></div>
+      <div class="input-row">
+        <input id="habit-in" type="text" placeholder="Yeni hedef ekle..." onkeydown="if(event.key==='Enter')addHabit()">
+        <button class="btn-sm" onclick="addHabit()">Ekle</button>
+      </div>
+      <div id="habits-list" class="list-wrap"></div>
+    </main>
+  </section>
+
+  <!-- ─── AKADEMİ ─── -->
+  <section id="t-acad" class="tab">
+    <header class="hdr">
+      <div><h1>Akademi</h1><p class="sub">Eğitim notların ve kayıtların</p></div>
+      <div id="auth-area">
+        <button id="signin-btn" class="google-btn" onclick="signInGoogle()">
+          <svg width="15" height="15" viewBox="0 0 24 24"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Giriş Yap
+        </button>
+        <div id="user-box" style="display:none;flex-direction:column;align-items:center;gap:4px;">
+          <img id="user-av" width="34" height="34" style="border-radius:50%;border:2px solid var(--rose);">
+          <button onclick="signOut()" style="background:none;border:none;font-size:11px;color:var(--muted);cursor:pointer;font-family:inherit;">Çıkış</button>
+        </div>
+      </div>
+    </header>
+    <main>
+      <div class="card form-card">
+        <input id="c-name" class="field" type="text" placeholder="Eğitim adı...">
+        <div class="chips" id="cat-chips">
+          <button class="chip active" data-cat="Motivasyon" onclick="selCat(this)">Motivasyon</button>
+          <button class="chip" data-cat="Farkındalık" onclick="selCat(this)">Farkındalık</button>
+          <button class="chip" data-cat="İçsel Huzur" onclick="selCat(this)">Huzur</button>
+          <button class="chip" data-cat="İletişim" onclick="selCat(this)">İletişim</button>
+          <button class="chip" data-cat="Yaratıcılık" onclick="selCat(this)">Yaratıcılık</button>
+          <button class="chip" data-cat="Sağlıklı Yaşam" onclick="selCat(this)">Sağlık</button>
+        </div>
+        <textarea id="c-notes" class="field textarea" placeholder="Neler öğrendin? Notlarını buraya yaz..."></textarea>
+        <div id="no-auth-warn" class="warn-box">Video eklemek için önce Google hesabınla giriş yap</div>
+        <label for="media-in" id="upload-lbl" class="upload-lbl" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="18" height="18"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+          <span id="upload-lbl-txt">Video veya ses ekle</span>
+          <input type="file" id="media-in" accept="video/*,audio/*" style="display:none;" onchange="handleFile(event)">
+        </label>
+        <div id="prog-bar-wrap" style="display:none;margin-bottom:12px;">
+          <div class="prog-track"><div id="prog-fill" class="prog-fill"></div></div>
+          <p id="prog-txt" style="text-align:center;font-size:13px;color:var(--muted);margin-top:6px;"></p>
+        </div>
+        <div id="media-prev"></div>
+        <button id="save-btn" class="btn-primary" onclick="saveCourse()">Arşive Kaydet</button>
+      </div>
+
+      <div class="search-bar">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input id="search-in" class="search-in" type="text" placeholder="Ara..." oninput="onSearch()">
+          <button id="clear-btn" onclick="clearSearch()" style="display:none;background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;">&times;</button>
+        </div>
+        <div class="chips filter-chips" id="filter-chips">
+          <button class="chip active" data-filter="Tümü" onclick="selFilter(this)">Tümü</button>
+          <button class="chip" data-filter="Motivasyon" onclick="selFilter(this)">Motivasyon</button>
+          <button class="chip" data-filter="Farkındalık" onclick="selFilter(this)">Farkındalık</button>
+          <button class="chip" data-filter="İçsel Huzur" onclick="selFilter(this)">Huzur</button>
+          <button class="chip" data-filter="İletişim" onclick="selFilter(this)">İletişim</button>
+          <button class="chip" data-filter="Yaratıcılık" onclick="selFilter(this)">Yaratıcılık</button>
+          <button class="chip" data-filter="Sağlıklı Yaşam" onclick="selFilter(this)">Sağlık</button>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <select id="sort-sel" class="sort-sel" onchange="renderCourses()">
+            <option value="newest">En yeni</option>
+            <option value="oldest">En eski</option>
+            <option value="alpha">A → Z</option>
+            <option value="alpha-d">Z → A</option>
+          </select>
+          <span id="res-count" style="font-size:13px;color:var(--muted);"></span>
+        </div>
+      </div>
+      <div id="course-list" class="list-wrap"></div>
+    </main>
+  </section>
+
+  <!-- ─── BİLDİRİM ─── -->
+  <section id="t-notif" class="tab">
+    <header class="hdr"><div><h1>Bildirimler</h1><p class="sub">Her gün sana özel mesaj</p></div></header>
+    <main>
+      <div class="card notif-hero" id="perm-card">
+        <div class="notif-icon-wrap">
+          <svg viewBox="0 0 48 48" fill="none"><path d="M24 4C14 4 8 12 8 20v10l-4 6h40l-4-6V20C40 12 34 4 24 4z" fill="#E8436A" opacity=".15" stroke="#E8436A" stroke-width="2"/><path d="M20 38c0 2.2 1.8 4 4 4s4-1.8 4-4" stroke="#E8436A" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Günlük İlham Bildirimleri</h3>
+        <p class="notif-desc">Her gün belirlediğin saatte telefona güzel bir not gelsin.</p>
+        <button id="perm-btn" class="btn-primary" onclick="askPerm()" style="margin-top:16px;">Bildirimlere İzin Ver</button>
+        <p id="perm-msg" class="perm-msg"></p>
+      </div>
+
+      <div class="card time-card" id="time-card" style="display:none;">
+        <div class="time-top">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#E8436A" stroke-width="2" width="28"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <div><h3 style="margin:0 0 2px;">Bildirim Saatin</h3><p style="font-size:13px;color:var(--muted);margin:0;">Her gün bu saatte mesaj gelecek</p></div>
+        </div>
+        <input type="time" id="time-in" class="time-in" value="08:00" onchange="saveTime()">
+        <p id="next-msg" class="next-msg"></p>
+        <button class="btn-outline" onclick="testNotif()">Test Bildirimi Gönder</button>
+      </div>
+
+      <div class="section-label">Özel Mesajlar</div>
+      <div class="card" style="padding:20px;">
+        <p style="font-size:14px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Oğlundan anneye özel mesajlar ekle, her gün sürpriz olarak gönderilsin.</p>
+        <div class="input-row" style="margin-bottom:0;">
+          <input id="msg-in" type="text" placeholder="Sevgili Hülya..." onkeydown="if(event.key==='Enter')addMsg()">
+          <button class="btn-sm" onclick="addMsg()">Ekle</button>
+        </div>
+        <div id="msgs-list" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <div class="section-label">Ana Ekrana Ekle</div>
+      <div class="card install-card">
+        <div class="install-step"><div class="step-n">1</div><div><b>Safari'de aç</b><p>Bu sayfayı Safari tarayıcısında aç</p></div></div>
+        <div class="install-step"><div class="step-n">2</div><div><b>Paylaş butonuna bas</b><p>Alt çubukta ortadaki paylaş simgesine dokun</p></div></div>
+        <div class="install-step"><div class="step-n">3</div><div><b>"Ana Ekrana Ekle" seç</b><p>Listeden seçip "Ekle"ye bas</p></div></div>
+        <div class="install-step"><div class="step-n">4</div><div><b>Hazır!</b><p>Artık uygulama gibi açabilirsin</p></div></div>
+        <div id="pwa-btn"></div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ─── BOTTOM NAV ─── -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="goTab('t-home',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402C1 3.403 4.068 2 6.5 2 8.763 2 10.824 3.398 12 5.184 13.176 3.398 15.237 2 17.5 2 19.932 2 23 3.404 23 7.191c0 4.105-5.369 8.863-11 14.402z"/></svg>
+      <span>İlham</span>
+    </button>
+    <button class="nav-btn" onclick="goTab('t-favs',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span>Favoriler</span>
+    </button>
+    <button class="nav-btn" onclick="goTab('t-track',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      <span>Takip</span>
+    </button>
+    <button class="nav-btn" onclick="goTab('t-acad',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      <span>Akademi</span>
+    </button>
+    <button class="nav-btn" onclick="goTab('t-notif',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      <span>Bildirim</span>
+    </button>
+  </nav>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
