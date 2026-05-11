@@ -624,3 +624,13 @@ body.night-mode .bottom-nav { background: rgba(26,15,20,0.9); }
 /* ── Scrollbar hide ──────────────────────────────────────── */
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; }
+
+/* iOS bildirim ipucu */
+.ios-tip {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: #E8F4FD; border: 1px solid #90CAF9;
+  border-radius: 12px; padding: 11px 14px; margin-top: 12px;
+  font-size: 13px; color: #1565C0; line-height: 1.5; text-align: left;
+}
+body.night-mode .ios-tip { background: #0D2744; border-color: #1565C0; color: #90CAF9; }
+.ios-tip svg { flex-shrink: 0; margin-top: 1px; stroke: #1565C0; }

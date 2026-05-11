@@ -775,69 +775,133 @@ async function delCourse(id) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// BİLDİRİM SİSTEMİ
+// BİLDİRİM SİSTEMİ — SW tabanlı, iOS uyumlu
 // ═══════════════════════════════════════════════════════════
-let swReg = null, alarmTick = null;
+let swReg = null;
 
+// SW'ye mesaj gönder
+function swPost(msg) {
+  if (swReg && swReg.active) {
+    swReg.active.postMessage(msg);
+    return true;
+  }
+  // SW henüz hazır değilse navigator.serviceWorker üzerinden dene
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(reg => {
+      if (reg.active) reg.active.postMessage(msg);
+    }).catch(() => {});
+  }
+  return false;
+}
+
+// İzin iste
 async function askPerm() {
   const btn = document.getElementById('perm-btn');
   const msg = document.getElementById('perm-msg');
-  if (!('Notification' in window)) { if (msg) msg.textContent="Bu tarayıcı desteklemiyor."; return; }
+
+  // iOS Safari kontrolü
+  if (!('Notification' in window)) {
+    if (msg) msg.textContent = "Bildirim için Safari'den ana ekrana ekle ve oradan aç!";
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    // Zaten izin var, direkt saat kartını göster
+    showTimeCard();
+    return;
+  }
+
   if (btn) btn.textContent = "İzin isteniyor...";
-  const p = await Notification.requestPermission().catch(()=>'denied');
+
+  let p;
+  try { p = await Notification.requestPermission(); }
+  catch(e) { p = 'denied'; }
+
   if (p === 'granted') {
-    if (msg) msg.textContent = "Bildirimler açık!";
-    showTimeCard(); toast("Bildirimler açıldı!"); startAlarm();
+    if (msg) msg.textContent = "✅ Bildirimler açık!";
+    showTimeCard();
+    toast("Bildirimler açıldı!");
+    pushAlarmToSW();
+  } else if (p === 'denied') {
+    if (msg) msg.textContent = "❌ İzin reddedildi. Ayarlar → Safari → Bildirimler'den açabilirsin.";
+    if (btn) { btn.disabled = false; btn.textContent = "Tekrar Dene"; }
   } else {
-    if (msg) msg.textContent = "İzin verilmedi.";
-    if (btn) btn.textContent = "Bildirimlere İzin Ver";
+    if (btn) { btn.disabled = false; btn.textContent = "Bildirimlere İzin Ver"; }
   }
 }
+
+// Saat kartını göster
 function showTimeCard() {
   const pc = document.getElementById('perm-card');
   const tc = document.getElementById('time-card');
-  if (pc) pc.style.display='none';
-  if (tc) { tc.style.display='block'; tc.style.animation='cardIn .3s ease'; }
-  const ti = document.getElementById('time-in'); if (ti) ti.value = notifTime;
+  if (pc) pc.style.display = 'none';
+  if (tc) { tc.style.display = 'block'; }
+  const ti = document.getElementById('time-in');
+  if (ti) ti.value = notifTime;
   updateNextMsg();
+  // SW'ye mevcut alarmı gönder
+  pushAlarmToSW();
 }
+
+// Saati kaydet
 function saveTime() {
-  const ti = document.getElementById('time-in'); if (!ti) return;
-  notifTime = ti.value; localStorage.setItem('notifTime', notifTime);
-  updateNextMsg(); toast("Bildirim saati kaydedildi: " + notifTime); startAlarm();
+  const ti = document.getElementById('time-in');
+  if (!ti) return;
+  notifTime = ti.value;
+  localStorage.setItem('notifTime', notifTime);
+  updateNextMsg();
+  toast("Bildirim saati kaydedildi: " + notifTime + " ✅");
+  pushAlarmToSW();
 }
+
+// SW'ye alarm bilgisini ilet
+function pushAlarmToSW() {
+  if (!notifTime) return;
+  const [h, m] = notifTime.split(':').map(Number);
+  swPost({
+    type: 'SET_ALARM',
+    hour: h,
+    minute: m,
+    quotes: getAllQuotes()
+  });
+}
+
+// "Sonraki bildirim X saat sonra" metni
 function updateNextMsg() {
-  const el = document.getElementById('next-msg'); if (!el || !notifTime) return;
-  const [h,m] = notifTime.split(':').map(Number);
-  const now=new Date(), next=new Date(); next.setHours(h,m,0,0);
-  if (next<=now) next.setDate(next.getDate()+1);
-  const diff=next-now, dh=Math.floor(diff/3600000), dm=Math.floor((diff%3600000)/60000);
-  el.textContent = dh>0 ? `Sonraki bildirim ${dh} saat ${dm} dakika sonra` : `Sonraki bildirim ${dm} dakika sonra`;
+  const el = document.getElementById('next-msg');
+  if (!el || !notifTime) return;
+  const [h, m] = notifTime.split(':').map(Number);
+  const now = new Date(), next = new Date();
+  next.setHours(h, m, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  const diff = next - now;
+  const dh = Math.floor(diff / 3600000);
+  const dm = Math.floor((diff % 3600000) / 60000);
+  el.textContent = dh > 0
+    ? `Sonraki bildirim yaklaşık ${dh} saat ${dm} dakika sonra`
+    : `Sonraki bildirim yaklaşık ${dm} dakika sonra`;
 }
+
+// Test bildirimi — SW üzerinden gönder
 function testNotif() {
-  if (Notification.permission!=='granted') return toast("Önce bildirim iznini ver!");
-  const q = getAllQuotes()[Math.floor(Math.random()*getAllQuotes().length)];
-  const go = () => new Notification("Hülya'nın Köşesi",{body:q,icon:'./icon-192.png'});
-  if (swReg) swReg.showNotification("Hülya'nın Köşesi",{body:q,icon:'./icon-192.png'}).catch(go);
-  else go();
-  toast("Test bildirimi gönderildi!");
-}
-function startAlarm() {
-  if (alarmTick) clearInterval(alarmTick);
-  alarmTick = setInterval(() => {
-    if (Notification.permission!=='granted') return;
-    const now=new Date(); const [h,m]=notifTime.split(':').map(Number);
-    if (now.getHours()===h && now.getMinutes()===m) {
-      const today=now.toLocaleDateString('tr-TR');
-      if (localStorage.getItem('lastNotif')===today) return;
-      localStorage.setItem('lastNotif',today);
-      const q=getAllQuotes()[Math.floor(Math.random()*getAllQuotes().length)];
-      const opts={body:q,icon:'./icon-192.png',vibrate:[200,100,200]};
-      if (swReg) swReg.showNotification("Hülya'nın Köşesi",opts).catch(()=>new Notification("Hülya'nın Köşesi",opts));
-      else new Notification("Hülya'nın Köşesi",opts);
+  if (Notification.permission !== 'granted') {
+    toast("Önce bildirim iznini ver!");
+    return;
+  }
+  const q = getAllQuotes()[Math.floor(Math.random() * getAllQuotes().length)];
+  const sent = swPost({ type: 'TEST_NOTIF', quote: q });
+  if (!sent) {
+    // SW hazır değil, doğrudan dene (Android Chrome'da çalışır)
+    try {
+      new Notification("Hülya'nın Köşesi 💕", {
+        body: q, icon: './icon-192.png'
+      });
+    } catch(e) {
+      toast("Bildirim gönderilemedi. Ana ekrana ekleyip oradan dene.");
+      return;
     }
-    updateNextMsg();
-  }, 60000);
+  }
+  toast("Test bildirimi gönderildi! 🔔");
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -873,7 +937,31 @@ function goTab(id, btn) {
   btn.classList.add('active');
   if (id==='t-favs')  renderFavs();
   if (id==='t-track') renderHabits();
-  if (id==='t-notif') { renderMsgs(); if (Notification.permission==='granted') showTimeCard(); }
+  if (id==='t-notif') {
+    renderMsgs();
+    // İzin durumuna göre doğru kartı göster
+    if (Notification.permission === 'granted') {
+      showTimeCard();
+    } else {
+      // perm-card'ı göster, time-card'ı gizle
+      const pc = document.getElementById('perm-card');
+      const tc = document.getElementById('time-card');
+      if (pc) pc.style.display = 'block';
+      if (tc) tc.style.display = 'none';
+      // İzin durumuna göre butonu güncelle
+      const pb = document.getElementById('perm-btn');
+      if (pb) {
+        if (Notification.permission === 'denied') {
+          pb.textContent = 'İzin Reddedildi — Ayarları Kontrol Et';
+          pb.disabled = true;
+        } else {
+          pb.textContent = 'Bildirimlere İzin Ver';
+          pb.disabled = false;
+        }
+      }
+    }
+    updateNextMsg();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -942,8 +1030,31 @@ window.onload = () => {
   // Init ripple (after DOM settles)
   setTimeout(initRipple, 2200);
 
+  // Service Worker kayıt
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').then(r=>{swReg=r;}).catch(()=>{});
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        swReg = reg;
+        reg.update().catch(() => {});
+        // SW hazır olunca alarmı gönder
+        navigator.serviceWorker.ready.then(() => {
+          if (Notification.permission === 'granted' && notifTime) {
+            pushAlarmToSW();
+          }
+        });
+      })
+      .catch(err => console.log('SW:', err));
+
+    // SW mesajlarını dinle
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data?.type === 'ALARM_ACK') {
+        console.log('Alarm SW tarafindan kuruldu:', e.data.hour + ':' + String(e.data.minute).padStart(2,'0'));
+      }
+    });
   }
-  if (Notification.permission==='granted' && notifTime) startAlarm();
+
+  // İzin zaten varsa saat kartı hazır olsun
+  if (Notification.permission === 'granted') {
+    updateNextMsg();
+  }
 };
