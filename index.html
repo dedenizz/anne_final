@@ -181,14 +181,56 @@
         <span id="streak-num2">0 gün seri</span>
       </div>
     </header>
+
+    <!-- Tab switcher inside tracker -->
+    <div class="tracker-tabs">
+      <button class="tr-tab active" id="tr-daily-btn" onclick="switchTracker('daily',this)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="4 10 8 14 16 6"/><rect x="1" y="1" width="18" height="18" rx="3"/></svg>
+        Günlük
+      </button>
+      <button class="tr-tab" id="tr-goals-btn" onclick="switchTracker('goals',this)">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="10" cy="10" r="8"/><circle cx="10" cy="10" r="4"/><circle cx="10" cy="10" r="1" fill="currentColor"/></svg>
+        21 Günlük Hedef
+      </button>
+    </div>
+
     <main>
-      <div id="prog-wrap"></div>
-      <div id="habit-stats-wrap"></div>
-      <div class="input-row">
-        <input id="habit-in" type="text" placeholder="Yeni hedef ekle..." onkeydown="if(event.key==='Enter')addHabit()">
-        <button class="btn-sm" onclick="addHabit()">Ekle</button>
+      <!-- ── Günlük ── -->
+      <div id="tr-daily">
+        <div id="prog-wrap"></div>
+        <div id="habit-stats-wrap"></div>
+        <div class="input-row">
+          <input id="habit-in" type="text" placeholder="Yeni günlük görev ekle..." onkeydown="if(event.key==='Enter')addHabit()">
+          <button class="btn-sm" onclick="addHabit()">Ekle</button>
+        </div>
+        <div id="habits-list" class="list-wrap"></div>
       </div>
-      <div id="habits-list" class="list-wrap"></div>
+
+      <!-- ── 21 Günlük Hedefler ── -->
+      <div id="tr-goals" style="display:none;">
+        <!-- Yeni hedef ekle -->
+        <div class="card goal-add-card">
+          <h3 class="goal-add-title">Yeni 21 Günlük Hedef</h3>
+          <p class="goal-add-sub">21 gün boyunca sürdürdüğün her alışkanlık kalıcı hale gelir.</p>
+          <input id="goal-name-in" class="field" type="text" placeholder="Hedef (örn: 21 gün şeker yok)">
+          <div class="goal-duration-row">
+            <span class="goal-dur-lbl">Süre:</span>
+            <button class="goal-dur-btn active" data-days="21" onclick="selectGoalDays(this)">21 Gün</button>
+            <button class="goal-dur-btn" data-days="30" onclick="selectGoalDays(this)">30 Gün</button>
+            <button class="goal-dur-btn" data-days="66" onclick="selectGoalDays(this)">66 Gün</button>
+            <button class="goal-dur-btn" data-days="100" onclick="selectGoalDays(this)">100 Gün</button>
+          </div>
+          <button class="btn-primary" onclick="addGoal()">Hedefi Başlat</button>
+        </div>
+
+        <!-- Aktif hedefler -->
+        <div class="section-label" id="goals-label" style="display:none;">Aktif Hedefler</div>
+        <div id="goals-list" class="list-wrap"></div>
+
+        <!-- Tamamlanan hedefler -->
+        <div class="section-label" id="done-goals-label" style="display:none;">Tamamlananlar</div>
+        <div id="done-goals-list" class="list-wrap"></div>
+      </div>
     </main>
   </section>
 

@@ -35,6 +35,8 @@ let moodHist    = JSON.parse(localStorage.getItem('moodHist')   || '[]');
 let customMsgs  = JSON.parse(localStorage.getItem('customMsgs') || '[]');
 let notifTime   = localStorage.getItem('notifTime')             || '08:00';
 let journals    = JSON.parse(localStorage.getItem('journals')   || '{}'); // keyed by date
+let goals       = JSON.parse(localStorage.getItem('goals')      || '[]');  // 21-day goals
+let goalDays    = 21; // selected duration for new goal
 
 // ═══════════════════════════════════════════════════════════
 // HÜLYA'YA ÖZEL ALINTILER (genişletilmiş)
@@ -128,6 +130,7 @@ function setQuoteText(q, dir) {
 }
 
 function refreshQuote(dir) {
+  playSound('swipe');
   setQuoteText(getRandomQuote(swipeQuoteIndex), dir || 'up');
 }
 
@@ -183,11 +186,13 @@ function toggleFav() {
   if (i === -1) {
     favorites.push(currentQ);
     toast("Favorilere eklendi");
+    playSound('fav');
     const btn = document.getElementById('fav-btn');
-    if (btn) { btn.style.transform = 'scale(1.3)'; setTimeout(() => btn.style.transform = '', 250); }
+    if (btn) { btn.style.transform = 'scale(1.35)'; setTimeout(() => btn.style.transform = '', 300); }
   } else {
     favorites.splice(i, 1);
     toast("Favorilerden çıkarıldı");
+    playSound('tap');
   }
   localStorage.setItem('fav', JSON.stringify(favorites));
   syncFavBtn();
@@ -366,6 +371,7 @@ function addHabit() {
   inp.value = '';
   renderHabits();
   updateStatsRow();
+  playSound('check');
   toast("Hedef eklendi!");
 }
 
@@ -376,8 +382,9 @@ function toggleHabit(id) {
   renderHabits();
   updateStatsRow();
   updateStreak();
+  playSound(h.done ? 'check' : 'uncheck');
   const allDone = habits.length > 0 && habits.every(h => h.done);
-  if (allDone) launchConfetti();
+  if (allDone) { launchConfetti(); playSound('success'); }
   else if (h?.done) toast("Tebrikler! Hedef tamamlandı");
 }
 
@@ -439,6 +446,253 @@ function renderHabits() {
 }
 
 // ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+// 21 GÜNLÜK HEDEF SİSTEMİ
+// ═══════════════════════════════════════════════════════════
+
+function switchTracker(mode, btn) {
+  document.querySelectorAll('.tr-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const daily = document.getElementById('tr-daily');
+  const goalsEl = document.getElementById('tr-goals');
+  if (mode === 'daily') {
+    if (daily) daily.style.display = 'block';
+    if (goalsEl) goalsEl.style.display = 'none';
+  } else {
+    if (daily) daily.style.display = 'none';
+    if (goalsEl) { goalsEl.style.display = 'block'; renderGoals(); }
+  }
+  playSound('tap');
+}
+
+function selectGoalDays(btn) {
+  document.querySelectorAll('.goal-dur-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  goalDays = parseInt(btn.dataset.days);
+  playSound('tap');
+}
+
+function addGoal() {
+  const nameEl = document.getElementById('goal-name-in');
+  const name = nameEl?.value.trim();
+  if (!name) return toast("Hedef adı boş olamaz!");
+  const goal = {
+    id: Date.now(),
+    name,
+    days: goalDays,
+    startDate: new Date().toISOString().slice(0, 10), // YYYY-MM-DD
+    checkedDays: [], // array of YYYY-MM-DD strings
+    archived: false
+  };
+  goals.push(goal);
+  localStorage.setItem('goals', JSON.stringify(goals));
+  if (nameEl) nameEl.value = '';
+  // Reset duration to 21
+  goalDays = 21;
+  document.querySelectorAll('.goal-dur-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+  renderGoals();
+  toast("Hedef başlatıldı! Başarılar Hülya!");
+  playSound('success');
+}
+
+function toggleGoalDay(goalId, dateStr) {
+  const g = goals.find(g => g.id === goalId);
+  if (!g) return;
+
+  // Sadece bugün ve geçmiş günler işaretlenebilir
+  const today = new Date().toISOString().slice(0, 10);
+  if (dateStr > today) return;
+
+  const idx = g.checkedDays.indexOf(dateStr);
+  if (idx === -1) {
+    g.checkedDays.push(dateStr);
+    playSound('check');
+    // Animate the day cell
+    setTimeout(() => {
+      const cell = document.querySelector(`[data-goal="${goalId}"][data-date="${dateStr}"]`);
+      if (cell) { cell.classList.add('pop'); setTimeout(() => cell.classList.remove('pop'), 400); }
+    }, 10);
+  } else {
+    g.checkedDays.splice(idx, 1);
+    playSound('tap');
+  }
+  localStorage.setItem('goals', JSON.stringify(goals));
+
+  // Check completion
+  const allDaysDone = g.checkedDays.length >= g.days;
+  if (allDaysDone && !g.completedAt) {
+    g.completedAt = new Date().toISOString();
+    localStorage.setItem('goals', JSON.stringify(goals));
+    setTimeout(() => { launchConfetti(); toast("Tebrikler! " + g.days + " günlük hedefi tamamladın!"); }, 300);
+  }
+
+  renderGoals();
+  updateStreak();
+}
+
+function deleteGoal(id) {
+  if (!confirm("Bu hedefi silmek istediğine emin misin?")) return;
+  goals = goals.filter(g => g.id !== id);
+  localStorage.setItem('goals', JSON.stringify(goals));
+  renderGoals();
+  toast("Hedef silindi.");
+  playSound('tap');
+}
+
+function renderGoals() {
+  const list = document.getElementById('goals-list');
+  const doneList = document.getElementById('done-goals-list');
+  const lbl = document.getElementById('goals-label');
+  const doneLbl = document.getElementById('done-goals-label');
+  if (!list) return;
+
+  const active = goals.filter(g => !g.completedAt);
+  const done   = goals.filter(g =>  g.completedAt);
+
+  if (lbl) lbl.style.display = active.length ? 'block' : 'none';
+  if (doneLbl) doneLbl.style.display = done.length ? 'block' : 'none';
+
+  renderGoalList(list, active, false);
+  if (doneList) renderGoalList(doneList, done, true);
+}
+
+function renderGoalList(container, list, isDone) {
+  container.innerHTML = '';
+  if (!list.length) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const CIRC = 226; // 2*pi*36 ≈ 226 (circumference for r=36)
+
+  list.forEach((g, gi) => {
+    const startDate = new Date(g.startDate);
+    const totalDays = g.days;
+    const checkedCount = g.checkedDays.length;
+    const pct = Math.min(100, Math.round((checkedCount / totalDays) * 100));
+    const elapsed = Math.floor((new Date() - startDate) / 86400000) + 1; // days since start
+    const remaining = Math.max(0, totalDays - checkedCount);
+    const isCompleted = !!g.completedAt;
+
+    // Goal streak (consecutive days ending today or yesterday)
+    let gStreak = 0;
+    const sortedChecks = [...g.checkedDays].sort();
+    for (let i = sortedChecks.length - 1; i >= 0; i--) {
+      const d = new Date(sortedChecks[i]);
+      const expected = new Date(today);
+      expected.setDate(expected.getDate() - (sortedChecks.length - 1 - i));
+      if (sortedChecks[i] === new Date(Date.now() - gStreak * 86400000).toISOString().slice(0,10)) {
+        gStreak++;
+      } else break;
+    }
+
+    // Today checked?
+    const todayChecked = g.checkedDays.includes(today);
+
+    // Status badge
+    let badge = '';
+    if (isCompleted) {
+      badge = '<span class="goal-status-badge done">✓ Tamamlandı</span>';
+    } else if (gStreak >= 3) {
+      badge = `<span class="goal-status-badge streak">🔥 ${gStreak} gün seri</span>`;
+    } else if (remaining === 0) {
+      badge = '<span class="goal-status-badge done">✓ Bitti!</span>';
+    } else {
+      badge = `<span class="goal-status-badge on-track">${remaining} gün kaldı</span>`;
+    }
+
+    // Goal icons based on name keywords
+    const icons = { 'şeker':'🍬', 'yağ':'🍔', 'spor':'💪', 'kitap':'📚', 'su':'💧',
+      'yürü':'🚶', 'medit':'🧘', 'sigara':'🚭', 'alkol':'🍷', 'erken':'🌅',
+      'uyku':'😴', 'vitamin':'💊', 'yoga':'🧘', 'koş':'🏃', 'egzersiz':'🏋️' };
+    let icon = '🎯';
+    const nameLower = g.name.toLowerCase();
+    for (const [kw, em] of Object.entries(icons)) {
+      if (nameLower.includes(kw)) { icon = em; break; }
+    }
+
+    // Build calendar grid (show all days)
+    let calHtml = '<div class="goal-calendar">';
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const ds = d.toISOString().slice(0, 10);
+      const isChecked = g.checkedDays.includes(ds);
+      const isTodayCell = ds === today;
+      const isFuture = ds > today;
+      let cls = 'goal-cal-day';
+      if (isChecked)   cls += isCompleted ? ' completed' : ' checked';
+      if (isTodayCell) cls += ' today';
+      if (isFuture)    cls += ' future';
+      const onclick = isFuture ? '' : `onclick="toggleGoalDay(${g.id},'${ds}')"`;
+      calHtml += `<div class="${cls}" data-goal="${g.id}" data-date="${ds}" ${onclick} title="${ds}">${i+1}</div>`;
+    }
+    calHtml += '</div>';
+
+    // Check today button
+    let checkBtn = '';
+    if (!isCompleted) {
+      if (todayChecked) {
+        checkBtn = `<button class="goal-check-btn checked" onclick="toggleGoalDay(${g.id},'${today}')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="4 10 8 14 16 6"/></svg>
+          Bugün tamamlandı
+        </button>`;
+      } else {
+        checkBtn = `<button class="goal-check-btn unchecked" onclick="toggleGoalDay(${g.id},'${today}')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="10" cy="10" r="8"/></svg>
+          Bugünü işaretle
+        </button>`;
+      }
+    }
+
+    const dashoffset = CIRC - (CIRC * pct / 100);
+    const startFormatted = startDate.toLocaleDateString('tr-TR');
+
+    const card = document.createElement('div');
+    card.className = 'goal-card' + (isCompleted ? ' completed' : '');
+    card.style.animationDelay = (gi * 0.06) + 's';
+    card.innerHTML = `
+      <svg width="0" height="0" style="position:absolute">
+        <defs><linearGradient id="roseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#E8436A"/>
+          <stop offset="100%" stop-color="#FF7B9C"/>
+        </linearGradient></defs>
+      </svg>
+      ${isCompleted ? '<div class="done-trophy">🏆</div>' : ''}
+      <div class="goal-header">
+        <div class="goal-icon">${icon}</div>
+        <div class="goal-meta">
+          <div class="goal-name">${esc(g.name)}</div>
+          <div class="goal-days-meta">${totalDays} günlük hedef · Başlangıç: ${startFormatted}</div>
+        </div>
+        <button class="goal-del" onclick="deleteGoal(${g.id})">&times;</button>
+      </div>
+      <div class="goal-circle-wrap">
+        <div class="goal-circle">
+          <svg viewBox="0 0 80 80" width="72" height="72">
+            <circle class="goal-circle-track" cx="40" cy="40" r="36"/>
+            <circle class="goal-circle-fill" cx="40" cy="40" r="36"
+              stroke-dasharray="${CIRC}"
+              stroke-dashoffset="${dashoffset}"
+              style="stroke:${isCompleted ? '#27AE60' : 'url(#roseGrad)'}"/>
+          </svg>
+          <div class="goal-circle-text">
+            <span class="goal-circle-pct" style="color:${isCompleted ? '#27AE60' : ''}">${pct}%</span>
+            <span class="goal-circle-lbl">${checkedCount}/${totalDays}</span>
+          </div>
+        </div>
+        <div class="goal-right">
+          <div class="goal-days-left">
+            ${isCompleted ? '✓' : remaining} <span>${isCompleted ? 'Tamamlandı' : 'gün kaldı'}</span>
+          </div>
+          ${badge}
+        </div>
+      </div>
+      ${calHtml}
+      <div class="goal-actions">${checkBtn}</div>`;
+    container.appendChild(card);
+  });
+}
+
 // KONFETI
 // ═══════════════════════════════════════════════════════════
 function launchConfetti() {
@@ -901,6 +1155,7 @@ function testNotif() {
       return;
     }
   }
+  playSound('notif');
   toast("Test bildirimi gönderildi! 🔔");
 }
 
@@ -931,6 +1186,7 @@ function renderMsgs() {
 // NAVIGASYON
 // ═══════════════════════════════════════════════════════════
 function goTab(id, btn) {
+  playSound('tap');
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -992,12 +1248,153 @@ function installPWA() {
   dip.userChoice.then(r=>{if(r.outcome==='accepted')toast("Uygulama kuruldu!");dip=null;});
 }
 
+
+// ═══════════════════════════════════════════════════════════
+// SES EFEKTLERİ (Web Audio API — yükleme yok, saf kod)
+// ═══════════════════════════════════════════════════════════
+let audioCtx = null;
+let soundEnabled = true;
+
+function getAudioCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e) { return null; }
+  }
+  return audioCtx;
+}
+
+function playSound(type) {
+  if (!soundEnabled) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+
+  // Resume if suspended (iOS requires user gesture)
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+  const now = ctx.currentTime;
+
+  switch(type) {
+    case 'tap': {
+      // Hafif tık — navigasyon, chip seçim
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.setValueAtTime(520, now);
+      o.frequency.exponentialRampToValueAtTime(380, now + 0.06);
+      g.gain.setValueAtTime(0.08, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      o.start(now); o.stop(now + 0.08);
+      break;
+    }
+    case 'check': {
+      // Görev tamamlama — iki nota
+      [0, 0.08].forEach((delay, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(i === 0 ? 440 : 660, now + delay);
+        g.gain.setValueAtTime(0.12, now + delay);
+        g.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.12);
+        o.start(now + delay); o.stop(now + delay + 0.12);
+      });
+      break;
+    }
+    case 'uncheck': {
+      // İşaret kaldırma — ters iki nota
+      [0, 0.07].forEach((delay, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(i === 0 ? 500 : 360, now + delay);
+        g.gain.setValueAtTime(0.07, now + delay);
+        g.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.1);
+        o.start(now + delay); o.stop(now + delay + 0.1);
+      });
+      break;
+    }
+    case 'success': {
+      // Başarı fanfar — üç nota artan
+      [[0, 440], [0.1, 550], [0.2, 660]].forEach(([delay, freq]) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(freq, now + delay);
+        g.gain.setValueAtTime(0.15, now + delay);
+        g.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.18);
+        o.start(now + delay); o.stop(now + delay + 0.18);
+      });
+      break;
+    }
+    case 'fav': {
+      // Favori ekle — tatlı arp
+      [[0, 523], [0.06, 659], [0.12, 784]].forEach(([delay, freq]) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, now + delay);
+        g.gain.setValueAtTime(0.1, now + delay);
+        g.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.2);
+        o.start(now + delay); o.stop(now + delay + 0.2);
+      });
+      break;
+    }
+    case 'swipe': {
+      // Kaydırma — whoosh
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(300, now);
+      o.frequency.exponentialRampToValueAtTime(180, now + 0.15);
+      g.gain.setValueAtTime(0.06, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      o.start(now); o.stop(now + 0.15);
+      break;
+    }
+    case 'notif': {
+      // Bildirim testi — nazik çan
+      [[0, 880], [0.15, 1108], [0.3, 880]].forEach(([delay, freq]) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freq, now + delay);
+        g.gain.setValueAtTime(0.12, now + delay);
+        g.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.25);
+        o.start(now + delay); o.stop(now + delay + 0.25);
+      });
+      break;
+    }
+    case 'toast': {
+      // Toast göster — subtle pop
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.setValueAtTime(440, now);
+      g.gain.setValueAtTime(0.05, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      o.start(now); o.stop(now + 0.06);
+      break;
+    }
+  }
+}
+
+// Ses toggle butonu oluştur (bildirim sekmesi dışı)
+function initSoundToggle() {
+  soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+}
+
 // ═══════════════════════════════════════════════════════════
 // BAŞLATMA
 // ═══════════════════════════════════════════════════════════
 window.onload = () => {
   setGreeting();
   initJournal();
+  initSoundToggle();
 
   // First quote — after splash
   setTimeout(() => {

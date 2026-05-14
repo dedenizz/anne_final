@@ -634,3 +634,333 @@ body.night-mode .bottom-nav { background: rgba(26,15,20,0.9); }
 }
 body.night-mode .ios-tip { background: #0D2744; border-color: #1565C0; color: #90CAF9; }
 .ios-tip svg { flex-shrink: 0; margin-top: 1px; stroke: #1565C0; }
+
+/* ═══════════════════════════════════════════════════════════
+   TRACKER TABS + 21-GÜNLÜK HEDEF SİSTEMİ
+   ═══════════════════════════════════════════════════════════ */
+
+.tracker-tabs {
+  display: flex; gap: 8px; margin: 0 16px 4px;
+  padding: 4px 0;
+}
+.tr-tab {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 12px; border-radius: 14px; border: 1.5px solid var(--border);
+  background: var(--card); font-family: inherit; font-size: 13px; font-weight: 700;
+  color: var(--muted); cursor: pointer;
+  transition: all 0.2s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: var(--shadow);
+}
+.tr-tab.active {
+  background: var(--rose-grad); color: white; border-color: transparent;
+  box-shadow: 0 4px 16px rgba(232,67,106,0.3);
+  transform: translateY(-1px);
+}
+.tr-tab:active { transform: scale(0.96); }
+.tr-tab svg { transition: stroke 0.2s; }
+.tr-tab.active svg { stroke: white; }
+
+/* Goal add card */
+.goal-add-card {
+  padding: 20px; margin: 8px 16px 0; display: flex; flex-direction: column; gap: 12px;
+}
+.goal-add-title {
+  font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700;
+}
+.goal-add-sub { font-size: 13px; color: var(--muted); line-height: 1.5; margin-top: -4px; }
+
+.goal-duration-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.goal-dur-lbl { font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.goal-dur-btn {
+  padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border);
+  background: var(--card); font-family: inherit; font-size: 13px; font-weight: 700;
+  color: var(--text); cursor: pointer; transition: all 0.18s;
+}
+.goal-dur-btn.active { background: var(--rose); color: white; border-color: var(--rose); }
+.goal-dur-btn:active { transform: scale(0.92); }
+
+/* Goal card */
+.goal-card {
+  background: var(--card); border-radius: 20px; margin-bottom: 14px;
+  padding: 18px 18px 16px; box-shadow: var(--shadow);
+  animation: cardIn 0.28s cubic-bezier(.34,1.56,.64,1) both;
+  position: relative; overflow: hidden;
+  transition: background 0.4s;
+}
+.goal-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--rose-grad); border-radius: 20px 20px 0 0;
+}
+.goal-card.completed::before { background: linear-gradient(135deg,#27AE60,#6FCF97); }
+.goal-card.failed::before { background: linear-gradient(135deg,#EB5757,#FF8A80); }
+
+.goal-header {
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px;
+}
+.goal-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--rose-light); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 20px;
+  transition: background 0.4s;
+}
+.goal-card.completed .goal-icon { background: #E8F8F0; }
+.goal-card.failed .goal-icon { background: #FFF0F0; }
+.goal-meta { flex: 1; min-width: 0; }
+.goal-name {
+  font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
+  color: var(--text); margin-bottom: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.goal-days-meta { font-size: 12px; color: var(--muted); font-weight: 600; }
+.goal-del {
+  background: none; border: none; color: #C7C7CC; font-size: 20px;
+  cursor: pointer; padding: 0 2px; flex-shrink: 0; align-self: flex-start;
+}
+
+/* Circle progress */
+.goal-circle-wrap {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 14px;
+}
+.goal-circle {
+  position: relative; width: 72px; height: 72px; flex-shrink: 0;
+}
+.goal-circle svg { transform: rotate(-90deg); }
+.goal-circle-track { fill: none; stroke: #F0E8EC; stroke-width: 6; }
+body.night-mode .goal-circle-track { stroke: #3A1525; }
+.goal-circle-fill {
+  fill: none; stroke-width: 6; stroke-linecap: round;
+  stroke: url(#roseGrad);
+  transition: stroke-dashoffset 0.6s cubic-bezier(.34,1.2,.64,1);
+}
+.goal-card.completed .goal-circle-fill { stroke: #27AE60; }
+.goal-circle-text {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.goal-circle-pct { font-size: 16px; font-weight: 800; color: var(--rose); line-height: 1; }
+.goal-card.completed .goal-circle-pct { color: #27AE60; }
+.goal-circle-lbl { font-size: 9px; color: var(--muted); font-weight: 700; margin-top: 1px; }
+
+.goal-right { flex: 1; }
+.goal-days-left {
+  font-size: 22px; font-weight: 800; color: var(--text); line-height: 1;
+  font-family: 'Playfair Display', serif;
+}
+.goal-days-left span { font-size: 13px; font-weight: 600; color: var(--muted); }
+.goal-start-date { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.goal-status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 6px; padding: 4px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+.goal-status-badge.on-track { background: #E8F8F0; color: #27AE60; }
+.goal-status-badge.streak   { background: #FFF3E0; color: #E65100; }
+.goal-status-badge.done     { background: #E8F8F0; color: #27AE60; }
+.goal-status-badge.failed   { background: #FFF0F0; color: #EB5757; }
+
+/* Calendar grid */
+.goal-calendar {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 4px; margin-top: 12px;
+}
+.goal-cal-day {
+  aspect-ratio: 1; border-radius: 6px; border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: var(--muted);
+  cursor: pointer; transition: all 0.18s cubic-bezier(.34,1.56,.64,1);
+  position: relative; overflow: hidden;
+  user-select: none;
+}
+.goal-cal-day.checked {
+  background: var(--rose-grad); border-color: transparent; color: white;
+  box-shadow: 0 2px 8px rgba(232,67,106,0.35);
+}
+.goal-cal-day.completed { background: linear-gradient(135deg,#27AE60,#6FCF97); border-color: transparent; color: white; }
+.goal-cal-day.today { border-color: var(--rose); border-width: 2px; }
+.goal-cal-day.future { opacity: 0.35; cursor: default; }
+.goal-cal-day:not(.future):not(.checked):active { transform: scale(0.82); }
+.goal-cal-day.pop { animation: dayPop 0.35s cubic-bezier(.34,1.8,.64,1); }
+@keyframes dayPop { 0%{transform:scale(1)} 50%{transform:scale(1.35)} 100%{transform:scale(1)} }
+
+.goal-actions {
+  display: flex; gap: 10px; margin-top: 14px; padding-top: 12px;
+  border-top: 0.5px solid var(--border);
+}
+.goal-check-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px; border-radius: 14px; border: none; cursor: pointer;
+  font-family: inherit; font-size: 14px; font-weight: 700;
+  transition: all 0.2s cubic-bezier(.34,1.56,.64,1);
+}
+.goal-check-btn.unchecked {
+  background: var(--rose-light); color: var(--rose);
+}
+.goal-check-btn.checked {
+  background: #E8F8F0; color: #27AE60;
+}
+.goal-check-btn:active { transform: scale(0.95); }
+.goal-check-btn svg { flex-shrink: 0; }
+
+/* Completed goal card */
+.goal-card.completed .goal-name { color: #27AE60; }
+.done-trophy {
+  font-size: 32px; text-align: center; margin-bottom: 8px;
+  animation: trophyBounce 0.6s cubic-bezier(.34,1.8,.64,1);
+}
+@keyframes trophyBounce { 0%{transform:scale(0)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+/* Smooth transitions */
+#tr-daily, #tr-goals {
+  animation: tabIn 0.24s ease both;
+}
+
+/* Sound wave animation (visual indicator when sound plays) */
+.sound-wave {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  pointer-events: none; z-index: 7000;
+}
+.sound-wave circle {
+  fill: none; stroke: var(--rose); stroke-width: 2; opacity: 0;
+  animation: soundRing 0.6s ease-out forwards;
+}
+.sound-wave circle:nth-child(2) { animation-delay: 0.1s; }
+.sound-wave circle:nth-child(3) { animation-delay: 0.2s; }
+@keyframes soundRing {
+  0%  { r: 10px; opacity: 0.7; }
+  100%{ r: 60px; opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SMOOTH EFFECTS & MICRO-ANIMATIONS v4
+   ═══════════════════════════════════════════════════════════ */
+
+/* Page transition — smoother tab switch */
+@keyframes tabIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.99); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Nav active pill */
+.nav-btn.active .nav-icon-wrap {
+  background: var(--rose-light);
+  box-shadow: 0 2px 12px rgba(232,67,106,0.2);
+}
+
+/* Quote card — smooth drag tilt */
+.quote-card { will-change: transform; }
+
+/* Favorite heart burst */
+@keyframes heartBurst {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.5) rotate(-10deg); }
+  60%  { transform: scale(0.9) rotate(5deg); }
+  100% { transform: scale(1); }
+}
+.qc-btn.loved { animation: heartBurst 0.35s ease; }
+
+/* Check animation for habit */
+@keyframes checkPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.h-check.popping { animation: checkPop 0.25s cubic-bezier(.34,1.56,.64,1); }
+
+/* Stats row hover */
+.stat-pill { transition: transform 0.18s, box-shadow 0.18s, background 0.4s; }
+.stat-pill:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(232,67,106,0.15); }
+
+/* Card entrance stagger */
+.list-wrap > *:nth-child(1)  { animation-delay: 0.00s; }
+.list-wrap > *:nth-child(2)  { animation-delay: 0.04s; }
+.list-wrap > *:nth-child(3)  { animation-delay: 0.08s; }
+.list-wrap > *:nth-child(4)  { animation-delay: 0.12s; }
+.list-wrap > *:nth-child(5)  { animation-delay: 0.16s; }
+
+/* Smooth scroll for main areas */
+main { scroll-behavior: smooth; }
+
+/* Bottom nav active bounce */
+@keyframes navBounce {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(-5px) scale(1.12); }
+  70%  { transform: translateY(-2px) scale(1.08); }
+  100% { transform: translateY(-2px) scale(1.08); }
+}
+.nav-btn.active svg { animation: navBounce 0.3s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+/* Fluid progress bar */
+.prog-fill { will-change: width; }
+
+/* Toast — smoother entrance with scale */
+.toast { transform: translateX(-50%) scale(0.9); }
+.toast.show { transform: translateX(-50%) scale(1); transition: top 0.36s cubic-bezier(.34,1.56,.64,1), transform 0.3s cubic-bezier(.34,1.56,.64,1); }
+
+/* Card press effect */
+.card, .fav-item, .habit-item, .course-item, .goal-card {
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.4s;
+}
+.card:active, .fav-item:active, .course-item:active { transform: scale(0.992); }
+
+/* Quote card swipe hint fade */
+.swipe-hint { transition: opacity 1s ease; }
+
+/* Streak badge glow on high streak */
+.streak-badge-lg[data-high="true"] {
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.2);
+  animation: streakGlow 2s ease infinite;
+}
+@keyframes streakGlow {
+  0%,100% { box-shadow: 0 0 0 3px rgba(255,107,0,0.2); }
+  50%      { box-shadow: 0 0 0 6px rgba(255,107,0,0.05); }
+}
+
+/* Mood button press ripple */
+.mood { will-change: transform; }
+
+/* Journal card focus */
+.journal-textarea:focus {
+  outline: none;
+}
+.journal-card:focus-within {
+  box-shadow: 0 4px 24px rgba(232,67,106,0.14);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Smooth chip selection */
+.chip, .filter-chip { will-change: transform; }
+
+/* Goal calendar day hover */
+.goal-cal-day:not(.future):hover {
+  border-color: var(--rose);
+  background: var(--rose-light);
+  transform: scale(1.12);
+}
+.goal-cal-day.checked:hover { opacity: 0.85; }
+
+/* Goal circle fill transition */
+.goal-circle-fill { will-change: stroke-dashoffset; }
+
+/* Floating label for time picker */
+.time-in { 
+  transition: background 0.2s, transform 0.15s;
+}
+.time-in:focus { transform: scale(1.01); }
+
+/* Section label fade in */
+.section-label { animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Sound toggle btn in notif tab */
+.sound-toggle {
+  position: absolute; top: 18px; right: 20px;
+  background: none; border: 1.5px solid var(--border);
+  border-radius: 20px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; color: var(--muted);
+  cursor: pointer; font-family: inherit;
+  transition: all 0.2s;
+}
+.sound-toggle.on  { background: var(--rose-light); color: var(--rose); border-color: var(--rose); }
+.sound-toggle.off { opacity: 0.6; }
