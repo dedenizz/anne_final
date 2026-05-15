@@ -1034,7 +1034,7 @@ async function delCourse(id) {
 // ═══════════════════════════════════════════════════════════
 
 // ⚠️  BURAYA OneSignal App ID'ni yaz:
-const ONESIGNAL_APP_ID = "BURAYA-APP-ID-YAZ";
+const ONESIGNAL_APP_ID = "da07f673-3030-48b4-8df0-27526d170d64";
 
 // OneSignal başlatma — SDK yüklendikten sonra çağrılır
 function initOneSignal() {
