@@ -1029,58 +1029,100 @@ async function delCourse(id) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// BİLDİRİM SİSTEMİ — SW tabanlı, iOS uyumlu
 // ═══════════════════════════════════════════════════════════
-let swReg = null;
+// BİLDİRİM SİSTEMİ — OneSignal (iOS PWA gerçek push)
+// ═══════════════════════════════════════════════════════════
 
-// SW'ye mesaj gönder
-function swPost(msg) {
-  if (swReg && swReg.active) {
-    swReg.active.postMessage(msg);
-    return true;
+// ⚠️  BURAYA OneSignal App ID'ni yaz:
+const ONESIGNAL_APP_ID = "BURAYA-APP-ID-YAZ";
+
+// OneSignal başlatma — SDK yüklendikten sonra çağrılır
+function initOneSignal() {
+  if (typeof OneSignal === 'undefined') {
+    // SDK henüz yüklenmediyse kısa bekle, tekrar dene
+    setTimeout(initOneSignal, 500);
+    return;
   }
-  // SW henüz hazır değilse navigator.serviceWorker üzerinden dene
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then(reg => {
-      if (reg.active) reg.active.postMessage(msg);
-    }).catch(() => {});
-  }
-  return false;
+
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: ONESIGNAL_APP_ID,
+      serviceWorkerParam: { scope: '/' },
+      // iOS için zorunlu: kullanıcıya izin istemeden önce soft prompt
+      promptOptions: {
+        slidedown: {
+          prompts: [{
+            type: 'push',
+            autoPrompt: false,           // biz manuel soruyoruz
+            text: {
+              actionMessage: "Hülya, her gün sana özel bir ilham mesajı gönderelim mi?",
+              acceptButton: "Evet, istiyorum!",
+              cancelButton: "Şimdi değil"
+            }
+          }]
+        }
+      }
+    });
+
+    // Abonelik durumunu güncelle
+    updateNotifUI();
+  });
 }
 
-// İzin iste
+// Bildirim izni iste (kullanıcı butona bastığında)
 async function askPerm() {
   const btn = document.getElementById('perm-btn');
   const msg = document.getElementById('perm-msg');
 
-  // iOS Safari kontrolü
-  if (!('Notification' in window)) {
-    if (msg) msg.textContent = "Bildirim için Safari'den ana ekrana ekle ve oradan aç!";
-    return;
-  }
-
-  if (Notification.permission === 'granted') {
-    // Zaten izin var, direkt saat kartını göster
-    showTimeCard();
+  if (typeof OneSignal === 'undefined') {
+    if (msg) msg.textContent = "OneSignal yüklenemedi. App ID'yi kontrol et.";
     return;
   }
 
   if (btn) btn.textContent = "İzin isteniyor...";
 
-  let p;
-  try { p = await Notification.requestPermission(); }
-  catch(e) { p = 'denied'; }
+  try {
+    // OneSignal'ın kendi izin diyaloğunu göster
+    await OneSignal.Slidedown.promptPush();
 
-  if (p === 'granted') {
-    if (msg) msg.textContent = "✅ Bildirimler açık!";
-    showTimeCard();
-    toast("Bildirimler açıldı!");
-    pushAlarmToSW();
-  } else if (p === 'denied') {
-    if (msg) msg.textContent = "❌ İzin reddedildi. Ayarlar → Safari → Bildirimler'den açabilirsin.";
-    if (btn) { btn.disabled = false; btn.textContent = "Tekrar Dene"; }
-  } else {
-    if (btn) { btn.disabled = false; btn.textContent = "Bildirimlere İzin Ver"; }
+    // Kısa bekle, abonelik durumunu kontrol et
+    await new Promise(r => setTimeout(r, 1000));
+    const isSubbed = await OneSignal.User.PushSubscription.optedIn;
+
+    if (isSubbed) {
+      if (msg) msg.textContent = "✅ Bildirimler açık!";
+      showTimeCard();
+      toast("Bildirimler açıldı! Artık her gün mesaj alacaksın.");
+      playSound('success');
+      saveOneSignalSubscriber();
+    } else {
+      if (msg) msg.textContent = "Henüz izin verilmedi. Tekrar deneyebilirsin.";
+      if (btn) { btn.textContent = "Bildirimlere İzin Ver"; btn.disabled = false; }
+    }
+  } catch (e) {
+    console.error('OneSignal askPerm:', e);
+    if (msg) msg.textContent = "Hata: " + e.message;
+    if (btn) { btn.textContent = "Bildirimlere İzin Ver"; btn.disabled = false; }
+  }
+}
+
+// OneSignal aboneliği Firestore'a kaydet (zamanlanmış bildirim için)
+async function saveOneSignalSubscriber() {
+  try {
+    const playerId = await OneSignal.User.PushSubscription.id;
+    if (!playerId) return;
+    const [h, m] = notifTime.split(':').map(Number);
+    await db.collection("subscribers").doc(playerId).set({
+      playerId,
+      notifHour  : h,
+      notifMinute: m,
+      quotes     : getAllQuotes().slice(0, 50), // ilk 50 alıntı
+      updatedAt  : firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    console.log('OneSignal subscriber kaydedildi:', playerId);
+  } catch (e) {
+    console.error('Subscriber kayıt hatası:', e);
   }
 }
 
@@ -1089,35 +1131,22 @@ function showTimeCard() {
   const pc = document.getElementById('perm-card');
   const tc = document.getElementById('time-card');
   if (pc) pc.style.display = 'none';
-  if (tc) { tc.style.display = 'block'; }
+  if (tc) tc.style.display = 'block';
   const ti = document.getElementById('time-in');
   if (ti) ti.value = notifTime;
   updateNextMsg();
-  // SW'ye mevcut alarmı gönder
-  pushAlarmToSW();
 }
 
-// Saati kaydet
-function saveTime() {
+// Saati kaydet + Firestore'u güncelle
+async function saveTime() {
   const ti = document.getElementById('time-in');
   if (!ti) return;
   notifTime = ti.value;
   localStorage.setItem('notifTime', notifTime);
   updateNextMsg();
   toast("Bildirim saati kaydedildi: " + notifTime + " ✅");
-  pushAlarmToSW();
-}
-
-// SW'ye alarm bilgisini ilet
-function pushAlarmToSW() {
-  if (!notifTime) return;
-  const [h, m] = notifTime.split(':').map(Number);
-  swPost({
-    type: 'SET_ALARM',
-    hour: h,
-    minute: m,
-    quotes: getAllQuotes()
-  });
+  playSound('tap');
+  await saveOneSignalSubscriber();
 }
 
 // "Sonraki bildirim X saat sonra" metni
@@ -1136,116 +1165,57 @@ function updateNextMsg() {
     : `Sonraki bildirim yaklaşık ${dm} dakika sonra`;
 }
 
-// Test bildirimi — SW üzerinden gönder
-function testNotif() {
-  if (Notification.permission !== 'granted') {
-    toast("Önce bildirim iznini ver!");
-    return;
-  }
-  const q = getAllQuotes()[Math.floor(Math.random() * getAllQuotes().length)];
-  const sent = swPost({ type: 'TEST_NOTIF', quote: q });
-  if (!sent) {
-    // SW hazır değil, doğrudan dene (Android Chrome'da çalışır)
-    try {
-      new Notification("Hülya'nın Köşesi 💕", {
-        body: q, icon: './icon-192.png'
-      });
-    } catch(e) {
-      toast("Bildirim gönderilemedi. Ana ekrana ekleyip oradan dene.");
+// Test bildirimi — OneSignal REST API üzerinden kendine gönder
+async function testNotif() {
+  const msg = document.getElementById('perm-msg');
+
+  try {
+    const playerId = await OneSignal.User.PushSubscription.id;
+    if (!playerId) {
+      toast("Önce bildirim iznini ver!");
       return;
     }
-  }
-  playSound('notif');
-  toast("Test bildirimi gönderildi! 🔔");
-}
 
-// ═══════════════════════════════════════════════════════════
-// ÖZEL MESAJLAR
-// ═══════════════════════════════════════════════════════════
-function addMsg() {
-  const inp=document.getElementById('msg-in'); const txt=inp?.value.trim();
-  if (!txt) return toast("Mesaj boş olamaz!");
-  customMsgs.push(txt); localStorage.setItem('customMsgs',JSON.stringify(customMsgs));
-  if (inp) inp.value=''; renderMsgs(); toast("Mesaj eklendi!");
-}
-function removeMsg(i) {
-  customMsgs.splice(i,1); localStorage.setItem('customMsgs',JSON.stringify(customMsgs)); renderMsgs();
-}
-function renderMsgs() {
-  const el=document.getElementById('msgs-list'); if (!el) return;
-  if (!customMsgs.length) { el.innerHTML='<p style="font-size:14px;color:var(--muted);text-align:center;padding:8px 0;">Henüz özel mesaj yok</p>'; return; }
-  el.innerHTML='';
-  customMsgs.forEach((m,i) => {
-    const d=document.createElement('div'); d.className='msg-item';
-    d.innerHTML=`<span>${esc(m)}</span><button class="msg-del" onclick="removeMsg(${i})">&times;</button>`;
-    el.appendChild(d);
-  });
-}
+    const q = getAllQuotes()[Math.floor(Math.random() * getAllQuotes().length)];
 
-// ═══════════════════════════════════════════════════════════
-// NAVIGASYON
-// ═══════════════════════════════════════════════════════════
-function goTab(id, btn) {
-  playSound('tap');
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById(id)?.classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  if (id==='t-favs')  renderFavs();
-  if (id==='t-track') renderHabits();
-  if (id==='t-notif') {
-    renderMsgs();
-    // İzin durumuna göre doğru kartı göster
-    if (Notification.permission === 'granted') {
-      showTimeCard();
+    // OneSignal REST API — public API key kullanmaz, sadece app_id yeterli
+    const res = await fetch('https://onesignal.com/api/v1/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        app_id            : ONESIGNAL_APP_ID,
+        include_player_ids: [playerId],
+        headings          : { tr: "Hülya'nın Köşesi 💕" },
+        contents          : { tr: q },
+        url               : window.location.href
+      })
+    });
+
+    if (res.ok) {
+      toast("Test bildirimi gönderildi! 🔔");
+      playSound('notif');
     } else {
-      // perm-card'ı göster, time-card'ı gizle
-      const pc = document.getElementById('perm-card');
-      const tc = document.getElementById('time-card');
-      if (pc) pc.style.display = 'block';
-      if (tc) tc.style.display = 'none';
-      // İzin durumuna göre butonu güncelle
-      const pb = document.getElementById('perm-btn');
-      if (pb) {
-        if (Notification.permission === 'denied') {
-          pb.textContent = 'İzin Reddedildi — Ayarları Kontrol Et';
-          pb.disabled = true;
-        } else {
-          pb.textContent = 'Bildirimlere İzin Ver';
-          pb.disabled = false;
-        }
-      }
+      const err = await res.json();
+      toast("Gönderim hatası: " + (err.errors?.[0] || 'Bilinmeyen'));
     }
-    updateNextMsg();
+  } catch (e) {
+    toast("Hata: " + e.message);
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════════════════════════
-function toast(msg) {
-  const el = document.getElementById('toast'); if (!el) return;
-  el.textContent = msg; el.classList.add('show');
-  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 3000);
-}
-function esc(s) {
-  if (!s) return '';
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ═══════════════════════════════════════════════════════════
-// PWA
-// ═══════════════════════════════════════════════════════════
-let dip=null;
-window.addEventListener('beforeinstallprompt', e=>{
-  e.preventDefault(); dip=e;
-  const w=document.getElementById('pwa-btn');
-  if (w) w.innerHTML='<button class="btn-primary" style="margin-top:16px;" onclick="installPWA()">Uygulamayı Ana Ekrana Ekle</button>';
-});
-function installPWA() {
-  if (!dip) return;
-  dip.prompt();
-  dip.userChoice.then(r=>{if(r.outcome==='accepted')toast("Uygulama kuruldu!");dip=null;});
+// Abonelik durumuna göre UI güncelle
+async function updateNotifUI() {
+  try {
+    if (typeof OneSignal === 'undefined') return;
+    const isSubbed = await OneSignal.User.PushSubscription.optedIn;
+    if (isSubbed) {
+      showTimeCard();
+      const msg = document.getElementById('perm-msg');
+      if (msg) msg.textContent = "✅ Bildirimler açık!";
+    }
+  } catch (e) {
+    console.log('updateNotifUI:', e);
+  }
 }
 
 
@@ -1388,6 +1358,71 @@ function initSoundToggle() {
   soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
 }
 
+
+
+function goTab(id, btn) {
+  playSound('tap');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if (id==='t-favs')  renderFavs();
+  if (id==='t-track') renderHabits();
+  if (id==='t-notif') {
+    renderMsgs();
+    // İzin durumuna göre doğru kartı göster
+    if (Notification.permission === 'granted') {
+      showTimeCard();
+    } else {
+      // perm-card'ı göster, time-card'ı gizle
+      const pc = document.getElementById('perm-card');
+      const tc = document.getElementById('time-card');
+      if (pc) pc.style.display = 'block';
+      if (tc) tc.style.display = 'none';
+      // İzin durumuna göre butonu güncelle
+      const pb = document.getElementById('perm-btn');
+      if (pb) {
+        if (Notification.permission === 'denied') {
+          pb.textContent = 'İzin Reddedildi — Ayarları Kontrol Et';
+          pb.disabled = true;
+        } else {
+          pb.textContent = 'Bildirimlere İzin Ver';
+          pb.disabled = false;
+        }
+      }
+    }
+    updateNextMsg();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════
+function toast(msg) {
+  const el = document.getElementById('toast'); if (!el) return;
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 3000);
+}
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════════════════
+// PWA
+// ═══════════════════════════════════════════════════════════
+let dip=null;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault(); dip=e;
+  const w=document.getElementById('pwa-btn');
+  if (w) w.innerHTML='<button class="btn-primary" style="margin-top:16px;" onclick="installPWA()">Uygulamayı Ana Ekrana Ekle</button>';
+});
+function installPWA() {
+  if (!dip) return;
+  dip.prompt();
+  dip.userChoice.then(r=>{if(r.outcome==='accepted')toast("Uygulama kuruldu!");dip=null;});
+}
+
 // ═══════════════════════════════════════════════════════════
 // BAŞLATMA
 // ═══════════════════════════════════════════════════════════
@@ -1396,23 +1431,21 @@ window.onload = () => {
   initJournal();
   initSoundToggle();
 
-  // First quote — after splash
   setTimeout(() => {
     currentQ = getRandomQuote(-1);
     const el = document.getElementById('quote-text');
-    if (el) { el.textContent = currentQ; el.style.opacity='1'; el.style.transform='none'; }
+    if (el) { el.textContent = currentQ; el.style.opacity = '1'; el.style.transform = 'none'; }
     syncFavBtn();
-
-    // Hide swipe hint if already swiped before
     const hint = document.getElementById('swipe-hint');
-    if (hint && localStorage.getItem('swipedOnce')) hint.style.opacity='0';
+    if (hint && localStorage.getItem('swipedOnce')) hint.style.opacity = '0';
   }, 1800);
 
-  // Restore today's mood button state
   const todayMood = moodHist[0]?.date === new Date().toLocaleDateString('tr-TR') ? moodHist[0].label : null;
   if (todayMood) {
     setTimeout(() => {
-      document.querySelectorAll('.mood').forEach(b => { if (b.dataset.mood===todayMood) b.classList.add('active'); });
+      document.querySelectorAll('.mood').forEach(b => {
+        if (b.dataset.mood === todayMood) b.classList.add('active');
+      });
     }, 200);
   }
 
@@ -1423,35 +1456,12 @@ window.onload = () => {
   updateStreak();
   loadCourses();
   initSwipe();
-
-  // Init ripple (after DOM settles)
   setTimeout(initRipple, 2200);
 
-  // Service Worker kayıt
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => {
-        swReg = reg;
-        reg.update().catch(() => {});
-        // SW hazır olunca alarmı gönder
-        navigator.serviceWorker.ready.then(() => {
-          if (Notification.permission === 'granted' && notifTime) {
-            pushAlarmToSW();
-          }
-        });
-      })
-      .catch(err => console.log('SW:', err));
-
-    // SW mesajlarını dinle
-    navigator.serviceWorker.addEventListener('message', e => {
-      if (e.data?.type === 'ALARM_ACK') {
-        console.log('Alarm SW tarafindan kuruldu:', e.data.hour + ':' + String(e.data.minute).padStart(2,'0'));
-      }
-    });
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
-  // İzin zaten varsa saat kartı hazır olsun
-  if (Notification.permission === 'granted') {
-    updateNextMsg();
-  }
+  // OneSignal başlat
+  initOneSignal();
 };

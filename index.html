@@ -14,6 +14,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- OneSignal Push Notification SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 </head>
 <body>
 
@@ -190,7 +192,7 @@
       </button>
       <button class="tr-tab" id="tr-goals-btn" onclick="switchTracker('goals',this)">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="10" cy="10" r="8"/><circle cx="10" cy="10" r="4"/><circle cx="10" cy="10" r="1" fill="currentColor"/></svg>
-        Günlük Hedef
+        21 Günlük Hedef
       </button>
     </div>
 
@@ -210,9 +212,9 @@
       <div id="tr-goals" style="display:none;">
         <!-- Yeni hedef ekle -->
         <div class="card goal-add-card">
-          <h3 class="goal-add-title">Günlük Hedef</h3>
-          <p class="goal-add-sub">Günler boyunca sürdürdüğün her alışkanlık kalıcı hale gelir.</p>
-          <input id="goal-name-in" class="field" type="text" placeholder="Hedef (örn: 30 gün  sosyal medya yok)">
+          <h3 class="goal-add-title">Yeni 21 Günlük Hedef</h3>
+          <p class="goal-add-sub">21 gün boyunca sürdürdüğün her alışkanlık kalıcı hale gelir.</p>
+          <input id="goal-name-in" class="field" type="text" placeholder="Hedef (örn: 21 gün şeker yok)">
           <div class="goal-duration-row">
             <span class="goal-dur-lbl">Süre:</span>
             <button class="goal-dur-btn active" data-days="21" onclick="selectGoalDays(this)">21 Gün</button>
